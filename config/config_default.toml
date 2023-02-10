@@ -1,0 +1,50 @@
+[link]
+# copy the linker script into build direcotry target/riscv64-unknown-none-elf/debug/kernel.ld
+script = 'kernel.ld'
+# replace ${LOAD-ADDRESS} with the value of 'load-address'
+load-address = '0x80200000'
+
+[config]
+features = ['cpuserver', 'kerndate']
+dev = [
+    'arch',
+    'cap',
+    'cons',
+    'dup',
+    'env',
+    'ip',
+    'mnt',
+    'mntn',
+    'pipe',
+    'proc',
+    'regress',
+    'root',
+    'segment',
+    'srv',
+    'uart',
+    'ws'
+]
+
+ip = [
+    'tcp',
+    'udp',
+    'ipifc',
+    'icmp',
+    'icmp6',
+    'gre'
+]
+
+link = [
+    'ethermedium',
+    'loopbackmedium',
+    'netdevmedium'
+]
+
+nodev = [
+    'kbin',
+    'kprof'
+]
+
+nouart = [
+    'pci'
+]
