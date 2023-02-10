@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, process::exit};
+use std::{
+    collections::HashMap,
+    fs::{self, File},
+    io::Write,
+    process::exit, path::Path,
+};
 use toml;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -43,14 +48,6 @@ pub fn read_config(filename: String) -> Configuration {
 }
 
 pub fn generate_build_args(config: &Configuration) {
-    for l in config.link.clone().into_iter() {
-        match l.0.as_str() {
-            "script" => {}
-            "load-address" => {}
-            _ => eprintln!("ignoring unknown option '{} = {}'", l.0, l.1),
-        }
-    }
-
     let joined = config.config.features.join(",");
     println!("--features=\"{joined}\"");
 
@@ -72,5 +69,31 @@ pub fn generate_build_args(config: &Configuration) {
 
     for nouart in &config.config.nouart {
         println!("--cfg nouart_{nouart}");
+    }
+}
+
+pub fn adjust_linker_script(config: &Configuration) {
+    let mut filename: String = "".into();
+    let mut load_address: String = "".into();
+
+    for l in config.link.clone().into_iter() {
+        match l.0.as_str() {
+            "script" => filename = l.1,
+            "load-address" => load_address = l.1,
+            _ => eprintln!("ignoring unknown option '{} = {}'", l.0, l.1),
+        }
+    }
+
+    if !filename.is_empty() && !load_address.is_empty() {
+        let mut contents = match fs::read_to_string(filename.clone()) {
+            Ok(c) => c,
+            Err(_) => {
+                eprintln!("Could not read file `{filename}`");
+                exit(1);
+            }
+        };
+        contents = contents.replace("${LOAD-ADDRESS}", &load_address);
+        let mut file = File::create("target/debug/kernel.ld").unwrap();
+        file.write_all(contents.as_bytes());
     }
 }

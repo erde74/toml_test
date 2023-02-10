@@ -1,6 +1,6 @@
 [link]
 # copy the linker script into build direcotry target/riscv64-unknown-none-elf/debug/kernel.ld
-script = 'kernel.ld'
+script = 'config/kernel.ld'
 # replace ${LOAD-ADDRESS} with the value of 'load-address'
 load-address = '0x80200000'
 
