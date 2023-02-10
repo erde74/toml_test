@@ -3,7 +3,7 @@ use std::{
     collections::HashMap,
     fs::{self, File},
     io::Write,
-    process::exit, path::Path,
+    process::exit,
 };
 use toml;
 
@@ -14,18 +14,18 @@ pub struct Link {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
-    pub features: Vec<String>,
-    pub dev: Vec<String>,
-    pub ip: Vec<String>,
-    pub link: Vec<String>,
-    pub nodev: Vec<String>,
-    pub nouart: Vec<String>,
+    pub features: Option<Vec<String>>,
+    pub dev: Option<Vec<String>>,
+    pub ip: Option<Vec<String>>,
+    pub link: Option<Vec<String>>,
+    pub nodev: Option<Vec<String>>,
+    pub nouart: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Configuration {
-    pub link: HashMap<String, String>,
-    pub config: Config,
+    pub link: Option<HashMap<String, String>>,
+    pub config: Option<Config>,
 }
 
 pub fn read_config(filename: String) -> Configuration {
@@ -48,27 +48,40 @@ pub fn read_config(filename: String) -> Configuration {
 }
 
 pub fn generate_build_args(config: &Configuration) {
-    let joined = config.config.features.join(",");
-    println!("--features=\"{joined}\"");
+    if let Some(config) = &config.config {
+        if let Some(features) = &config.features {
+            let joined = features.join(",");
+            println!("--features=\"{joined}\"");
+        }
 
-    for dev in &config.config.dev {
-        println!("--cfg dev_{dev}");
-    }
+        if let Some(devices) = &config.dev {
+            for dev in devices {
+                println!("--cfg dev_{dev}");
+            }
+        }
 
-    for ip in &config.config.ip {
-        println!("--cfg ip_{ip}");
-    }
+        if let Some(ips) = &config.ip {
+            for ip in ips {
+                println!("--cfg ip_{ip}");
+            }
+        }
+        if let Some(links) = &config.link {
+            for link in links {
+                println!("--cfg link_{link}");
+            }
+        }
 
-    for link in &config.config.link {
-        println!("--cfg link_{link}");
-    }
+        if let Some(nodevs) = &config.nodev {
+            for nodev in nodevs {
+                println!("--cfg nodev_{nodev}");
+            }
+        }
 
-    for nodev in &config.config.nodev {
-        println!("--cfg nodev_{nodev}");
-    }
-
-    for nouart in &config.config.nouart {
-        println!("--cfg nouart_{nouart}");
+        if let Some(nouarts) = &config.nouart {
+            for nouart in nouarts {
+                println!("--cfg nouart_{nouart}");
+            }
+        }
     }
 }
 
@@ -76,11 +89,13 @@ pub fn adjust_linker_script(config: &Configuration) {
     let mut filename: String = "".into();
     let mut load_address: String = "".into();
 
-    for l in config.link.clone().into_iter() {
-        match l.0.as_str() {
-            "script" => filename = l.1,
-            "load-address" => load_address = l.1,
-            _ => eprintln!("ignoring unknown option '{} = {}'", l.0, l.1),
+    if let Some(link) = &config.link {
+        for l in link.into_iter() {
+            match l.0.as_str() {
+                "script" => filename = l.1.clone(),
+                "load-address" => load_address = l.1.clone(),
+                _ => eprintln!("ignoring unknown option '{} = {}'", l.0, l.1),
+            }
         }
     }
 
