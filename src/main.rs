@@ -4,10 +4,14 @@ mod config;
 
 fn main() {
     let config = read_config("config/config_default.toml".into());
-    generate_build_args(&config);
+    let buildargs = generate_build_args(&config);
     adjust_linker_script(&config);
-
+/*
     let config = read_config("config/config_nezha.toml".into());
     generate_build_args(&config);
     adjust_linker_script(&config);
+*/
+    for ba in buildargs {
+        println!("{ba}");
+    }
 }

@@ -8,13 +8,19 @@ use std::{
 use toml;
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct Build {
+    pub features: Option<Vec<String>>,
+    pub rustflags: Option<Vec<String>>,
+    pub target: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Link {
     pub conf: HashMap<String, String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
-    pub features: Option<Vec<String>>,
     pub dev: Option<Vec<String>>,
     pub ip: Option<Vec<String>>,
     pub link: Option<Vec<String>>,
@@ -24,8 +30,9 @@ pub struct Config {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Configuration {
-    pub link: Option<HashMap<String, String>>,
+    pub build: Option<Build>,
     pub config: Option<Config>,
+    pub link: Option<HashMap<String, String>>,
 }
 
 pub fn read_config(filename: String) -> Configuration {
@@ -47,42 +54,58 @@ pub fn read_config(filename: String) -> Configuration {
     config
 }
 
-pub fn generate_build_args(config: &Configuration) {
-    if let Some(config) = &config.config {
+pub fn generate_build_args(config: &Configuration) -> Vec<String> {
+    let mut cmd: Vec<String> = Vec::new();
+
+    if let Some(config) = &config.build {
         if let Some(features) = &config.features {
             let joined = features.join(",");
-            println!("--features=\"{joined}\"");
+            cmd.push(format!("--features={joined}"));
         }
 
+        let target = &config.target;
+        cmd.push(format!("--target").into());
+        cmd.push(format!("{target}").into());
+
+        if let Some(flags) = &config.rustflags {
+            for f in flags {
+                cmd.push(f.into());
+            }
+        }
+    }
+
+    if let Some(config) = &config.config {
         if let Some(devices) = &config.dev {
             for dev in devices {
-                println!("--cfg dev_{dev}");
+                cmd.push(format!("--cfg dev_{dev}"));
             }
         }
 
         if let Some(ips) = &config.ip {
             for ip in ips {
-                println!("--cfg ip_{ip}");
+                cmd.push(format!("--cfg ip_{ip}"));
             }
         }
         if let Some(links) = &config.link {
             for link in links {
-                println!("--cfg link_{link}");
+                cmd.push(format!("--cfg link_{link}"));
             }
         }
 
         if let Some(nodevs) = &config.nodev {
             for nodev in nodevs {
-                println!("--cfg nodev_{nodev}");
+                cmd.push(format!("--cfg nodev_{nodev}"));
             }
         }
 
         if let Some(nouarts) = &config.nouart {
             for nouart in nouarts {
-                println!("--cfg nouart_{nouart}");
+                cmd.push(format!("--cfg nouart_{nouart}"));
             }
         }
     }
+
+    cmd
 }
 
 pub fn adjust_linker_script(config: &Configuration) {
@@ -109,6 +132,6 @@ pub fn adjust_linker_script(config: &Configuration) {
         };
         contents = contents.replace("${LOAD-ADDRESS}", &load_address);
         let mut file = File::create("target/debug/kernel.ld").unwrap();
-        file.write_all(contents.as_bytes());
+        let _ = file.write_all(contents.as_bytes());
     }
 }
